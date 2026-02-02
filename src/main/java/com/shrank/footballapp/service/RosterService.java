@@ -6,18 +6,24 @@ import com.shrank.footballapp.domain.Team;
 import com.shrank.footballapp.repository.CoachRepository;
 import com.shrank.footballapp.repository.PlayerRepository;
 import com.shrank.footballapp.repository.TeamRepository;
+import com.shrank.footballapp.web.SyncController;
 import com.shrank.footballapp.web.dto.CoachDto;
 import com.shrank.footballapp.web.dto.PlayerDto;
 import com.shrank.footballapp.web.dto.RosterDto;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class RosterService {
+    private static final Logger log = LoggerFactory.getLogger(RosterService.class);
+
     private final TeamRepository teamRepository;
     private final PlayerRepository playerRepository;
     private final CoachRepository coachRepository;
@@ -45,6 +51,7 @@ public class RosterService {
                 .map(this::toDto)
                 .toList();
 
+        log.info("Fetched roster for team {}: {} players, {} coaches", team.getName(), players.size(), coaches.size());
         return new RosterDto(team.getId(), team.getName(), players, coaches);
     }
 

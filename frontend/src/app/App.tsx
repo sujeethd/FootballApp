@@ -102,16 +102,20 @@ export default function App() {
 
     fetch(`/api/teams/${selectedTeam.id}/roster`)
       .then((response) => {
+        console.log('Roster response received', selectedTeam.id);
+
         if (!response.ok) {
           throw new Error('Failed to load roster');
         }
+        console.log('Roster response:', response);
         return response.json();
       })
       .then((data) => {
         if (!active) return;
         setRosters((prev) => ({ ...prev, [selectedTeam.id]: data as Roster }));
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Failed to load roster', error);
         // Ignore roster errors for now
       })
       .finally(() => {

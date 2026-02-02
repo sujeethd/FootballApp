@@ -1,10 +1,12 @@
 package com.shrank.footballapp.service;
 
 import com.shrank.footballapp.domain.Match;
+import com.shrank.footballapp.domain.Player;
 import com.shrank.footballapp.domain.Team;
 import com.shrank.footballapp.integration.ApiFootballClient;
 import com.shrank.footballapp.integration.ApiFootballProperties;
 import com.shrank.footballapp.repository.MatchRepository;
+import com.shrank.footballapp.repository.PlayerRepository;
 import com.shrank.footballapp.repository.TeamRepository;
 
 import jakarta.transaction.Transactional;
@@ -20,17 +22,20 @@ public class SyncService {
     private final ApiFootballProperties props;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
+    private final PlayerRepository playerRepository;
 
     public SyncService(
             ApiFootballClient api,
             ApiFootballProperties props,
             TeamRepository teamRepository,
-            MatchRepository matchRepository
+            MatchRepository matchRepository,
+            PlayerRepository playerRepository
     ) {
         this.api = api;
         this.props = props;
         this.teamRepository = teamRepository;
         this.matchRepository = matchRepository;
+        this.playerRepository = playerRepository;
     }
 
     @Transactional
@@ -41,8 +46,8 @@ public class SyncService {
         int updated = 0;
 
         for (ApiFootballClient.ApiTeam apiTeam : apiTeams) {
-            Optional<Team> existing = teamRepository.findByApiId(apiTeam.id());
-            Team team = existing.orElseGet(Team::new);
+            Optional<Team> teamExisting = teamRepository.findByApiId(apiTeam.id());
+            Team team = teamExisting.orElseGet(Team::new);
             if (team.getId() == null) {
                 created++;
             } else {
@@ -56,6 +61,17 @@ public class SyncService {
             team.setFlagUrl(apiTeam.logo());
 
             teamRepository.save(team);
+
+            for (ApiFootballClient.ApiPlayer apiPlayer : apiTeam.roster()) {
+                Optional<Player> playerExisting = playerRepository.findByApiId(apiPlayer.id());
+                Player player = playerExisting.orElseGet(Player::new);
+                player.setApiId(apiPlayer.id());
+                player.setTeam(team);
+                player.setName(apiPlayer.name());
+                player.setPosition(apiPlayer.position());
+                player.setNumber(apiPlayer.number());
+                playerRepository.save(player);
+            }
         }
 
         return new SyncResult("teams", created, updated, apiTeams.size());

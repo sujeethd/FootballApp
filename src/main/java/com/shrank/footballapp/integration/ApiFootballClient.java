@@ -23,6 +23,21 @@ public class ApiFootballClient {
         this.props = props;
     }
 
+    public List<ApiPlayer> fetchRoster(int teamId) {
+        log.info("Fetching roster for team ID: {}", teamId);
+        ObjectNode root = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/players/squads")
+                        .queryParam("team", teamId)
+                        .build())
+                .retrieve()
+                .body(ObjectNode.class);
+
+        log.info("Fetched roster from API Football for team ID {}: {}", teamId, root); 
+
+        return parseRoster(root);
+    }
+
     public List<ApiTeam> fetchTeams() {
         ObjectNode root = restClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -52,6 +67,32 @@ public class ApiFootballClient {
         return parseFixtures(root);
     }
 
+    private List<ApiPlayer> parseRoster(JsonNode root) {
+        List<ApiPlayer> roster = new ArrayList<>();
+        if (root == null || root.get("response") == null) {
+            return roster;
+        }
+        for (JsonNode item : root.get("response")) {
+            JsonNode team = item.get("team");
+            JsonNode players = item.get("players");
+            log.info("Parsing roster item: team={}, players={}", team, players);
+
+            if (players == null || team == null) {
+                continue;
+            }
+            for (JsonNode playersNode : players) {
+                roster.add(new ApiPlayer(
+                        playersNode.path("id").asInt(),
+                        team.path("id").asInt(),
+                        playersNode.path("name").stringValue(null),
+                        playersNode.path("position").stringValue(null),
+                        playersNode.path("number").asInt()
+                ));
+            }
+        }
+        return roster;
+    }
+
     private List<ApiTeam> parseTeams(JsonNode root) {
         List<ApiTeam> teams = new ArrayList<>();
         if (root == null || root.get("response") == null) {
@@ -64,10 +105,11 @@ public class ApiFootballClient {
             }
             teams.add(new ApiTeam(
                     team.path("id").asInt(),
-                    team.path("name").asText(null),
-                    team.path("code").asText(null),
-                    team.path("country").asText(null),
-                    team.path("logo").asText(null)
+                    team.path("name").stringValue(null),
+                    team.path("code").stringValue(null),
+                    team.path("country").stringValue(null),
+                    team.path("logo").stringValue(null),
+                    fetchRoster(team.path("id").asInt())
             ));
         }
         return teams;
@@ -87,7 +129,7 @@ public class ApiFootballClient {
                 continue;
             }
 
-            String dateText = fixture.path("date").asText(null);
+            String dateText = fixture.path("date").stringValue(null);
             Instant kickoff = StringUtils.hasText(dateText) ? Instant.parse(dateText) : null;
 
             JsonNode home = teams.get("home");
@@ -96,18 +138,33 @@ public class ApiFootballClient {
             fixtures.add(new ApiFixture(
                     fixture.path("id").asInt(),
                     kickoff,
-                    fixture.path("status").path("short").asText(null),
-                    new ApiFixtureTeam(home.path("id").asInt(), home.path("name").asText(null)),
-                    new ApiFixtureTeam(away.path("id").asInt(), away.path("name").asText(null)),
+                    fixture.path("status").path("short").stringValue(null),
+                    new ApiFixtureTeam(home.path("id").asInt(), home.path("name").stringValue(null)),
+                    new ApiFixtureTeam(away.path("id").asInt(), away.path("name").stringValue(null)),
                     goals == null || goals.isNull() ? null : (goals.path("home").isNull() ? null : goals.path("home").asInt()),
                     goals == null || goals.isNull() ? null : (goals.path("away").isNull() ? null : goals.path("away").asInt()),
-                    fixture.path("venue").path("name").asText(null)
+                    fixture.path("venue").path("name").stringValue(null)
             ));
         }
         return fixtures;
     }
 
-    public record ApiTeam(int id, String name, String code, String country, String logo) {}
+    public record ApiPlayer(
+            int id,
+            int teamId,
+            String name,
+            String position,
+            int number
+    ) {}
+
+    public record ApiTeam(
+        int id, 
+        String name, 
+        String code, 
+        String country, 
+        String logo,
+        List<ApiPlayer> roster 
+    ) {}
 
     public record ApiFixtureTeam(int id, String name) {}
 
