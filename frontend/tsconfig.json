@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"]

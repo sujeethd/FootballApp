@@ -31,6 +31,7 @@ export function TeamCard({ team, isFollowing, onToggleFollow, onViewDetails }: T
             variant={isFollowing ? "default" : "outline"}
             size="sm"
             onClick={() => onToggleFollow(team.id)}
+            aria-label={isFollowing ? 'Unfollow team' : 'Follow team'}
             className="ml-2"
           >
             <Star className={`h-4 w-4 ${isFollowing ? 'fill-current' : ''}`} />
