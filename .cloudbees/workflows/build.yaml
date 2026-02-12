@@ -14,8 +14,7 @@ jobs:
         uses: cloudbees-io/checkout@v1
       - name: gradle build
         uses: docker://gradle:8.6-jdk21-alpine
-        run: chmod +x ./gradlew
-        run: ./gradlew build
+        run: chmod +x ./gradlew; ./gradlew build
       - name: gradle test
         uses: docker://gradle:8.6-jdk21-alpine
         run: ./gradlew test
